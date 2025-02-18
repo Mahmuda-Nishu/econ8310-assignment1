@@ -27,11 +27,11 @@ train_data = train_data.asfreq('h')
 y_train = train_data["trips"]
 
 # Train Exponential Smoothing model
-var_model = ExponentialSmoothing(y_train, seasonal='add', seasonal_periods=24)
-modelFit = var_model.fit()
+model = ExponentialSmoothing(y_train, seasonal='add', seasonal_periods=24)
+modelFit = model.fit()
 
 # Save trained model
-with open("var_model.pkl", "wb") as f:
+with open("model.pkl", "wb") as f:
     pickle.dump(modelFit, f)
 
 # Load test data
