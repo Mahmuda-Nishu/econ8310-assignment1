@@ -9,9 +9,10 @@ Original file is located at
 
 import pandas as pd
 import numpy as np
-from statsmodels.tsa.api import ExponentialSmoothing
 import pickle
 import matplotlib.pyplot as plt
+from statsmodels.tsa.api import ExponentialSmoothing
+
 
 # Load training data
 train_url = "https://github.com/dustywhite7/econ8310-assignment1/raw/main/assignment_data_train.csv"
@@ -26,11 +27,11 @@ train_data = train_data.asfreq('h')
 y_train = train_data["trips"]
 
 # Train Exponential Smoothing model
-model = ExponentialSmoothing(y_train, seasonal='add', seasonal_periods=24)
-modelFit = model.fit()
+var_model = ExponentialSmoothing(y_train, seasonal='add', seasonal_periods=24)
+modelFit = var_model.fit()
 
 # Save trained model
-with open("model.pkl", "wb") as f:
+with open("var_model.pkl", "wb") as f:
     pickle.dump(modelFit, f)
 
 # Load test data
@@ -46,12 +47,12 @@ test_data = test_data.asfreq('h')
 pred = modelFit.forecast(steps=744)
 
 # Save predictions
-pred.to_csv("predictions.csv")
+pred.to_csv("var_predictions.csv")
 
 print("✅ Model training and forecasting completed!")
 
 # Load predictions
-pred = pd.read_csv("predictions.csv", index_col=0)
+pred = pd.read_csv("var_predictions.csv", index_col=0)
 pred.index = pd.to_datetime(pred.index)
 
 # Forecast plot
