@@ -45,14 +45,14 @@ y_train = y_train.astype(float)
 print("🔄 Training VAR Model...")
 
 # Define and fit the VAR model
-var_model = VAR(y_train)
-var_fit = var_model.fit(maxlags=24)  # Use up to 24-hour lags
+model = VAR(y_train)
+var_fit = model.fit(maxlags=24)  # Use up to 24-hour lags
 
 # Save the trained model
-with open("var_model.pkl", "wb") as f:
+with open("model.pkl", "wb") as f:
     pickle.dump(var_fit, f)
 
-print("✅ VAR model training complete! Model saved as 'var_model.pkl'.")
+print("✅ VAR model training complete! Model saved as 'model.pkl'.")
 
 # =========================
 # 📌 Load & Process Test Data
@@ -92,15 +92,15 @@ pred_df = pd.DataFrame(pred_var, columns=y_train.columns, index=test_data.index)
 pred_trips = pred_df['trips']
 
 # Save predictions to CSV
-pred_trips.to_csv("var_predictions.csv")
+pred_trips.to_csv("predictions.csv")
 
-print("✅ Predictions saved as 'var_predictions.csv'.")
+print("✅ Predictions saved as 'predictions.csv'.")
 
 # ================================
 # 📊 Visualize Predictions
 # ================================
 # Load predictions
-pred_trips = pd.read_csv("var_predictions.csv", index_col=0)
+pred_trips = pd.read_csv("predictions.csv", index_col=0)
 pred_trips.index = pd.to_datetime(pred_trips.index)
 
 # Plot the predictions
