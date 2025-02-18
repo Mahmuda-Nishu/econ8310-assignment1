@@ -8,75 +8,107 @@ Original file is located at
 """
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.tsa.api import ExponentialSmoothing
 import pickle
 
-# Load datasets
+# =========================
+# 📌 Load & Process Training Data
+# =========================
 train_url = "https://raw.githubusercontent.com/dustywhite7/econ8310-assignment1/main/assignment_data_train.csv"
-test_url = "https://raw.githubusercontent.com/dustywhite7/econ8310-assignment1/main/assignment_data_test.csv"
+train_data = pd.read_csv(train_url)
 
-# Read the data with correct column names
-train_data = pd.read_csv(train_url, parse_dates=['Timestamp'], index_col='Timestamp')
-test_data = pd.read_csv(test_url, parse_dates=['Timestamp'], index_col='Timestamp')
+# Ensure correct timestamp column name
+if 'Timestamp' in train_data.columns:
+    train_data.rename(columns={'Timestamp': 'timestamp'}, inplace=True)
 
-# Ensure the data is sorted by timestamp
-train_data = train_data.sort_index()
-test_data = test_data.sort_index()
+# Convert timestamp column to datetime format and set as index
+train_data['timestamp'] = pd.to_datetime(train_data['timestamp'])
+train_data.set_index('timestamp', inplace=True)
 
-# ==============================
-# 📌 Enhanced Training Data Plot
-# ==============================
-plt.figure(figsize=(14, 6))
-plt.plot(train_data['trips'], label='Taxi Trips', color='royalblue', linewidth=1.5, alpha=0.85)
+# Ensure dataset follows an hourly frequency
+train_data = train_data.asfreq('h')
 
-# Title and labels with improved formatting
-plt.title('NYC Hourly Taxi Trip Requests (Training Data)', fontsize=16, fontweight='bold')
-plt.xlabel('Time', fontsize=12)
-plt.ylabel('Number of Trips', fontsize=12)
+# Select the dependent variable (number of taxi trips)
+y_train = train_data['trips']
 
-# Formatting x-axis for better readability
-plt.xticks(rotation=45)
-plt.grid(True, linestyle='--', alpha=0.6)
-
-# Adding a legend
-plt.legend(fontsize=12, loc='upper right')
-
-# Display plot
-plt.show()
-
-# ========================================
-# 📌 Fit Holt-Winters (Triple Exp. Smoothing)
-# ========================================
-print("🔄 Training Holt-Winters Model...")
+# ============================
+# 📌 Train Exponential Smoothing Model
+# ============================
+print("🔄 Training Holt-Winters Exponential Smoothing Model...")
 
 model = ExponentialSmoothing(
-    train_data['trips'],
+    y_train,
     trend="add",
     seasonal="add",
     seasonal_periods=24  # 24-hour seasonal pattern (hourly data)
 )
 
-# Fit the model (Suppress convergence warnings)
+# Fit the model
 modelFit = model.fit()
 
-print("✅ Model training complete!")
+# Save the trained model
+with open("model.pkl", "wb") as f:
+    pickle.dump(modelFit, f)
 
-# ===========================================
-# 📌 Generate predictions for 744 test hours
-# ===========================================
-print("📈 Generating predictions for test data...")
+print("✅ Model training complete! Model saved as 'model.pkl'.")
+
+# =========================
+# 📌 Load & Process Test Data
+# =========================
+test_url = "https://raw.githubusercontent.com/dustywhite7/econ8310-assignment1/main/assignment_data_test.csv"
+test_data = pd.read_csv(test_url)
+
+# Ensure correct timestamp column name in test data
+if 'Timestamp' in test_data.columns:
+    test_data.rename(columns={'Timestamp': 'timestamp'}, inplace=True)
+
+# Convert test timestamp column to datetime format and set as index
+test_data['timestamp'] = pd.to_datetime(test_data['timestamp'])
+test_data.set_index('timestamp', inplace=True)
+
+# Ensure dataset follows an hourly frequency
+test_data = test_data.asfreq('h')
+
+# ============================
+# 📌 Generate Forecast for 744 Hours
+# ============================
+print("📈 Generating 744-hour forecast...")
 
 pred = modelFit.forecast(steps=744)
 
-# Convert predictions into a DataFrame
-pred_df = pd.DataFrame(pred, columns=['Predicted_Trips'])
-
-# Save model for future use
-with open("holt_winters_model.pkl", "wb") as file:
-    pickle.dump(modelFit, file)
-
 # Save predictions to CSV
-pred_df.to_csv("taxi_trip_predictions.csv", index=True)
+pred.to_csv("predictions.csv")
 
-print("✅ Predictions saved as 'taxi_trip_predictions.csv'")
+print("✅ Predictions saved as 'predictions.csv'.")
+
+# ================================
+# 📊 Visualize Predictions
+# ================================
+# Load predictions
+pred = pd.read_csv("predictions.csv", index_col=0)
+pred.index = pd.to_datetime(pred.index)
+
+# Plot the predictions
+plt.figure(figsize=(12, 5))
+plt.plot(pred, label="Predicted Trips", color='blue', linewidth=1.5)
+plt.title("Forecasted Number of Taxi Trips", fontsize=14, fontweight="bold")
+plt.xlabel("Time", fontsize=12)
+plt.ylabel("Number of Trips", fontsize=12)
+plt.grid(True, linestyle="--", alpha=0.6)
+plt.legend()
+plt.show()
+
+# ================================
+# 📊 Compare Actual vs Predicted
+# ================================
+plt.figure(figsize=(12, 5))
+plt.plot(y_train[-500:], label="Actual Trips (Training)", color='black', linewidth=1.5)  # Last 500 hours of training data
+plt.plot(pred, label="Predicted Trips", color='blue', linestyle="dashed", linewidth=1.5)
+plt.title("Actual vs Forecasted Taxi Trips", fontsize=14, fontweight="bold")
+plt.xlabel("Time", fontsize=12)
+plt.ylabel("Number of Trips", fontsize=12)
+plt.grid(True, linestyle="--", alpha=0.6)
+plt.legend()
+plt.show()
