@@ -9,14 +9,12 @@ Original file is located at
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from statsmodels.tsa.api import ExponentialSmoothing
+from statsmodels.tsa.statespace.varmax import VARMAX
 import pickle
 
-# =========================
-# 📌 Load & Process Training Data
-# =========================
-train_url = "https://raw.githubusercontent.com/dustywhite7/econ8310-assignment1/main/assignment_data_train.csv"
+# Load training data
+train_url = "https://github.com/dustywhite7/econ8310-assignment1/raw/main/assignment_data_train.csv"
 train_data = pd.read_csv(train_url)
 
 # Ensure correct timestamp column name
@@ -33,31 +31,16 @@ train_data = train_data.asfreq('h')
 # Select the dependent variable (number of taxi trips)
 y_train = train_data['trips']
 
-# ============================
-# 📌 Train Exponential Smoothing Model
-# ============================
-print("🔄 Training Holt-Winters Exponential Smoothing Model...")
-
-model = ExponentialSmoothing(
-    y_train,
-    trend="add",
-    seasonal="add",
-    seasonal_periods=24  # 24-hour seasonal pattern (hourly data)
-)
-
-# Fit the model
+# === OPTION 1: Exponential Smoothing Model === #
+model = ExponentialSmoothing(y_train, seasonal='add', seasonal_periods=24)
 modelFit = model.fit()
 
 # Save the trained model
 with open("model.pkl", "wb") as f:
     pickle.dump(modelFit, f)
 
-print("✅ Model training complete! Model saved as 'model.pkl'.")
-
-# =========================
-# 📌 Load & Process Test Data
-# =========================
-test_url = "https://raw.githubusercontent.com/dustywhite7/econ8310-assignment1/main/assignment_data_test.csv"
+# Load test data
+test_url = "https://github.com/dustywhite7/econ8310-assignment1/raw/main/assignment_data_test.csv"
 test_data = pd.read_csv(test_url)
 
 # Ensure correct timestamp column name in test data
@@ -67,48 +50,36 @@ if 'Timestamp' in test_data.columns:
 # Convert test timestamp column to datetime format and set as index
 test_data['timestamp'] = pd.to_datetime(test_data['timestamp'])
 test_data.set_index('timestamp', inplace=True)
-
-# Ensure dataset follows an hourly frequency
 test_data = test_data.asfreq('h')
 
-# ============================
-# 📌 Generate Forecast for 744 Hours
-# ============================
-print("📈 Generating 744-hour forecast...")
-
+# Forecast for 744 hours (January of next year)
 pred = modelFit.forecast(steps=744)
 
-# Save predictions to CSV
+# Save predictions
 pred.to_csv("predictions.csv")
 
-print("✅ Predictions saved as 'predictions.csv'.")
+print("Model training and prediction completed successfully!")
 
-# ================================
-# 📊 Visualize Predictions
-# ================================
+import matplotlib.pyplot as plt
+
 # Load predictions
 pred = pd.read_csv("predictions.csv", index_col=0)
 pred.index = pd.to_datetime(pred.index)
 
 # Plot the predictions
 plt.figure(figsize=(12, 5))
-plt.plot(pred, label="Predicted Trips", color='blue', linewidth=1.5)
-plt.title("Forecasted Number of Taxi Trips", fontsize=14, fontweight="bold")
-plt.xlabel("Time", fontsize=12)
-plt.ylabel("Number of Trips", fontsize=12)
-plt.grid(True, linestyle="--", alpha=0.6)
+plt.plot(pred, label="Predicted Trips", color='blue')
+plt.title("Forecasted Number of Taxi Trips")
+plt.xlabel("Time")
+plt.ylabel("Number of Trips")
 plt.legend()
 plt.show()
 
-# ================================
-# 📊 Compare Actual vs Predicted
-# ================================
 plt.figure(figsize=(12, 5))
-plt.plot(y_train[-500:], label="Actual Trips (Training)", color='black', linewidth=1.5)  # Last 500 hours of training data
-plt.plot(pred, label="Predicted Trips", color='blue', linestyle="dashed", linewidth=1.5)
-plt.title("Actual vs Forecasted Taxi Trips", fontsize=14, fontweight="bold")
-plt.xlabel("Time", fontsize=12)
-plt.ylabel("Number of Trips", fontsize=12)
-plt.grid(True, linestyle="--", alpha=0.6)
+plt.plot(y_train[-500:], label="Actual Trips (Training)", color='black')  # Last 500 hours of training data
+plt.plot(pred, label="Predicted Trips", color='blue')
+plt.title("Actual vs Forecasted Taxi Trips")
+plt.xlabel("Time")
+plt.ylabel("Number of Trips")
 plt.legend()
 plt.show()
